@@ -1,7 +1,9 @@
 # $Id$
 
 CC = cc
-CFLAGS = -std=c99 -DPLATFORM_UNIX
+LD = cc
+CFLAGS = -std=c99 -DPLATFORM_UNIX -c
 LDFLAGS =
 LIBS =
 EXEC =
+OBJ = .o

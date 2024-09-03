@@ -14,13 +14,7 @@
 #define NEWLINE "\r\n"
 #define BREAKKEY
 
-#elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO)
-
-#define mull(x, y) ((x) * (y))
-#define divl(x, y) ((x) / (y))
-#define killcursor(x)
-#define cursor(x)
-#define strnum atoi
+#elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO) || defined(PLATFORM_C64)
 
 #if defined(PLATFORM_WINDOWS)
 #define PLATFORM "Windows"
@@ -30,7 +24,18 @@
 #define PLATFORM "Arduino"
 #define NEWLINE "\r\n"
 #define BREAKKEY
+#elif defined(PLATFORM_C64)
+#define PLATFORM "Commodore-64"
+#define NEWLINE "\r\n"
+#define BREAKKEY
+#include <conio.h>
 #endif
+
+#define mull(x, y) ((x) * (y))
+#define divl(x, y) ((x) / (y))
+#define killcursor(x)
+#define cursor(x)
+#define strnum atoi
 
 #ifndef NEWLINE
 #define NEWLINE "\n"
@@ -57,6 +62,12 @@
 #define putchar uart_putchar
 #elif defined(PLATFORM_UNIX)
 #include <termios.h>
+#elif defined(PLATFORM_C64)
+#define BUFFER_SIZE (16 * 1024)
+#undef killcursor
+#undef cursor
+#define killcursor(x) cursor(0)
+#define cursor(x) cursor(1)
 #endif
 
 #if defined(PLATFORM_ARDUINO)
@@ -77,27 +88,38 @@ void uart_init(void) {
 }
 #endif
 
-char agetch(void) {
-#if defined(PLATFORM_WINDOWS)
+#define agetch(x) oggetch(0)
+char oggetch(char wait) {
 	int c;
+#if defined(PLATFORM_WINDOWS)
 rescan:
 	c = _getch();
 	if(c == '\r') return '\n';
 	if(c == '\n') goto rescan;
-	return c;
 #elif defined(PLATFORM_UNIX)
-	int c = getchar();
+	c = getchar();
 	if(c == EOF) return -1;
 	if(c == '\r') return '\n';
 #elif defined(PLATFORM_ARDUINO)
-	int c;
 rescan:
-	if(!(UCSR0A & _BV(RXC0))) return 0;
+	if(wait){
+		if(!(UCSR0A & _BV(RXC0))) return 0;
+	}else{
+		while(!(UCSR0A & _BV(RXC0)));
+	}
 	c = UDR0;
 	if(c == '\r') return '\n';
 	if(c == '\n') goto rescan;
 	if(c == 3) return 1;
-	return c;
+#elif defined(PLATFORM_C64)
+	if(!wait){
+		if(!kbhit()) return 0;
+	}
+	c = cgetc();
+	if(c == EOF) return -1;
+	if(c == '\r') return '\n';
+	if(c == 20) return 8;
+	if(c == 3) return 1;
 #endif
 	return c;
 }
@@ -136,11 +158,12 @@ void putstr(const char* n) {
 #endif
 
 void change_color(int a) {
+#if defined(PLATFORM_ARDUINO) || defined(PLATFORM_UNIX)
 	int fg = (a >> 4) & 0xf;
 	int bg = (a & 0xf);
+	char color[2];
 	if(!(0 <= fg && fg <= 15)) return;
 	if(!(0 <= bg && bg <= 15)) return;
-	char color[2];
 	color[1] = 0;
 	if(bg < 8) {
 		color[0] = bg + '0';
@@ -161,6 +184,12 @@ void change_color(int a) {
 	putstr(color);
 	putstr("m");
 	putstr("\x1b[2J\x1b[1;1H");
+#elif defined(PLATFORM_C64)
+	int fg = (a >> 4) & 0xf;
+	int bg = (a & 0xf);
+	bgcolor(bg);
+	textcolor(fg);
+#endif
 }
 
 void clear(void) {
@@ -168,6 +197,8 @@ void clear(void) {
 	system("cls");
 #elif defined(PLATFORM_UNIX) || defined(PLATFORM_ARDUINO)
 	putstr("\x1b[0m\x1b[2J\x1b[1;1H");
+#elif defined(PLATFORM_C64)
+	clrscr();
 #endif
 }
 
@@ -191,6 +222,9 @@ int main() {
 	uart_init();
 	DDRB |= _BV(DDB5);
 	PORTB |= _BV(PORT5);
+#endif
+#if defined(PLATFORM_C64)
+	change_color((1 << 4) | 0);
 #endif
 	basic();
 #if defined(PLATFORM_WINDOWS)
@@ -224,14 +258,14 @@ char linebuf[LINE_BUFFER_SIZE];
 int pexpr(char* expr, char* buffer, int* number) {
 	char ownbuf[128];
 	int i;
-	for(i = 0; expr[i] != 0; i++) ownbuf[i] = expr[i];
-	ownbuf[i] = 0;
 	int start = 0;
 	int br = 0;
 	int result = 0;
 	int stack[32];
 	int sp = 0;
 	char put = 0;
+	for(i = 0; expr[i] != 0; i++) ownbuf[i] = expr[i];
+	ownbuf[i] = 0;
 	for(i = 0; i < 32; i++) stack[i] = 0;
 	for(i = 0;; i++) {
 		if(ownbuf[i] == 0) {
@@ -291,17 +325,18 @@ redo:
 }
 
 int run(char* cmd, int linenum, char num, int* lgoto) {
-#ifdef BREAKKEY
-	if(agetch() == 1) return -1;
-#endif
 	char line[LINE_BUFFER_SIZE];
 	char rcmd[32];
 	int i;
+	char* arg;
+	int incr = 0;
+#ifdef BREAKKEY
+	if(agetch() == 1) return -1;
+#endif
 	if(lgoto != 0) *lgoto = 0;
 	for(i = 0; cmd[i] != 0; i++) line[i] = cmd[i];
 	line[i] = 0;
 	rcmd[0] = 0;
-	int incr = 0;
 	for(i = 0;; i++) {
 		if(line[i] == ' ' || line[i] == '\t' || line[i] == 0 || line[i] == '"') {
 			break;
@@ -319,11 +354,12 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 			rcmd[incr] = 0;
 		}
 	}
-	char* arg = line + 1 + strlen(rcmd);
+	arg = line + 1 + strlen(rcmd);
 	if(strcaseequ(rcmd, "COLOR")) {
 		int argc = 0;
 		char* farg = 0;
 		char* sarg = 0;
+		int fgcolor, bgcolor, ret0, ret1;
 		if(arg[0] != 0) argc++;
 		for(i = 0; arg[i] != 0; i++) {
 			if(arg[i] == ',') {
@@ -344,10 +380,10 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 			putstr(NEWLINE);
 			return 1;
 		}
-		int bgcolor = 0;
-		int fgcolor = 0;
-		int ret0 = pexpr(farg, 0, &bgcolor);
-		int ret1 = pexpr(sarg, 0, &fgcolor);
+		bgcolor = 0;
+		fgcolor = 0;
+		ret0 = pexpr(farg, 0, &bgcolor);
+		ret1 = pexpr(sarg, 0, &fgcolor);
 		if(ret0 == 0) {
 			putstr("! Invalid argument");
 			if(linenum != -1) {
@@ -390,6 +426,7 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 		int lbuf[LINES];
 		int shift[LINES];
 		int cnt = 0;
+		int i;
 		while(1) {
 			unsigned long ln = 0;
 			for(i = 0; i < 4; i++) {
@@ -402,7 +439,6 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 			saddr += strlen(basicbuffer + saddr) + 1;
 		}
 		sort(lbuf, shift, cnt);
-		int i;
 		for(i = 0; i < cnt; i++) {
 			putnum(lbuf[i]);
 			putstr(" ");
@@ -434,7 +470,7 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 		int lbuf[LINES];
 		int shift[LINES];
 		int cnt = 0;
-		int gt;
+		int gt, i;
 		while(1) {
 			unsigned long ln = 0;
 			for(i = 0; i < 4; i++) {
@@ -447,12 +483,11 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 			saddr += strlen(basicbuffer + saddr) + 1;
 		}
 		sort(lbuf, shift, cnt);
-		int i;
 		for(i = 0; i < cnt; i++) {
 			int ret = run(basicbuffer + shift[i], lbuf[i], 1, &gt);
 			if(ret != 0) return ret;
 			if(gt != 0) {
-				char found = 0;
+				char found;
 				for(i = 0; i < cnt; i++) {
 					if(lbuf[i] == gt) {
 						found = 1;
@@ -514,6 +549,7 @@ int execute(int linenum, char* cmd, char num) {
 		int i;
 		int shf = 0;
 		int cnt = 0;
+		int len;
 		while(1) {
 			unsigned long ln = 0;
 			for(i = 0; i < 4; i++) {
@@ -544,7 +580,7 @@ int execute(int linenum, char* cmd, char num) {
 				linenum >>= 8;
 			}
 		}
-		int len = 0;
+		len = 0;
 		cnt = 0;
 		while(1) {
 			int slen = strlen(basicbuffer + len);
@@ -570,9 +606,9 @@ int execute(int linenum, char* cmd, char num) {
 				cnt++;
 
 				if(cnt == shf) {
-					len -= slen + 1;
 					int i;
 					int nc = 0;
+					len -= slen + 1;
 					for(i = len;; i++) {
 						basicbuffer[i] = basicbuffer[i + slen + 1];
 						if(basicbuffer[i] == 0) {
@@ -592,6 +628,7 @@ int execute(int linenum, char* cmd, char num) {
 
 void basic(void) {
 	int i;
+	int lineind;
 	clear();
 
 #ifdef SMALL
@@ -631,23 +668,27 @@ void basic(void) {
 
 	cursor();
 	linebuf[0] = 0;
-	int lineind = 0;
+	lineind = 0;
 	while(1) {
-		char c = agetch();
+		char c;
+#if defined(PLATFORM_C64)
+		c = oggetch(1);
+#else
+		c = agetch();
+#endif
 		if(c != 0) killcursor();
 		if(c == 1) {
 			putstr("Break");
 			putstr(NEWLINE);
 			lineind = 0;
 		} else if(c == '\n') {
+			int i;
+			char num = 1;
+			char* cmd = linebuf;
+
 			linebuf[lineind] = 0;
 			putstr(NEWLINE);
 			if(lineind == 0) goto skip;
-
-			int i;
-			char num = 1;
-
-			char* cmd = linebuf;
 
 			for(i = 0; linebuf[i] != 0; i++) {
 				if(linebuf[i] == ' ') {

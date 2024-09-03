@@ -8,14 +8,14 @@ TARGET ?= krakow$(EXEC)
 
 all: $(TARGET)
 
-krakow$(EXEC): krakow.o
-	$(CC) $(LDFLAGS) -o $@ krakow.o $(LIBS)
+krakow$(EXEC): krakow$(OBJ)
+	$(LD) $(LDFLAGS) -o $@ krakow$(OBJ) $(LIBS)
 
 krakow.hex: krakow.elf
 	objcopy -O ihex -R $(SECTION) krakow.elf $@
 
-krakow.o: basic.c
-	$(CC) $(CFLAGS) -c -o $@ basic.c
+krakow$(OBJ): basic.c
+	$(CC) $(CFLAGS) -o $@ basic.c
 
 clean:
-	rm -f *.hex *.exe krakow *.o *.elf
+	rm -f *.hex *.exe krakow *.o *.elf krakow.s *.80
