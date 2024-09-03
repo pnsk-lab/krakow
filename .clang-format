@@ -1,0 +1,15 @@
+---
+# $Id$
+Language: Cpp
+UseTab: Always
+TabWidth: 8
+IndentWidth: 8
+PointerAlignment: Left
+ColumnLimit: 1024
+AllowShortIfStatementsOnASingleLine: Always
+AllowShortBlocksOnASingleLine: Never
+AllowShortLoopsOnASingleLine: true
+SpaceBeforeParens: Never
+AlignEscapedNewlines: DontAlign
+SortIncludes: false
+AllowShortEnumsOnASingleLine: false

@@ -142,19 +142,19 @@ void change_color(int a) {
 	if(!(0 <= bg && bg <= 15)) return;
 	char color[2];
 	color[1] = 0;
-	if(bg < 8){
+	if(bg < 8) {
 		color[0] = bg + '0';
 		putstr("\x1b[4");
-	}else{
+	} else {
 		color[0] = (bg - 8) + '0';
 		putstr("\x1b[10");
 	}
 	putstr(color);
 	putstr("m");
-	if(fg < 8){
+	if(fg < 8) {
 		color[0] = fg + '0';
 		putstr("\x1b[3");
-	}else{
+	} else {
 		color[0] = (fg - 8) + '0';
 		putstr("\x1b[9");
 	}
