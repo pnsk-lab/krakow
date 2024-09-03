@@ -14,7 +14,7 @@
 #define NEWLINE "\r\n"
 #define BREAKKEY
 
-#elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO) || defined(PLATFORM_C64)
+#elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO) || defined(PLATFORM_C64) || defined(PLATFORM_A800XL)
 
 #if defined(PLATFORM_WINDOWS)
 #define PLATFORM "Windows"
@@ -27,6 +27,11 @@
 #elif defined(PLATFORM_C64)
 #define PLATFORM "Commodore-64"
 #define NEWLINE "\r\n"
+#define BREAKKEY
+#include <conio.h>
+#elif defined(PLATFORM_A800XL)
+#define PLATFORM "Atari-800XL"
+#define NEWLINE "\n"
 #define BREAKKEY
 #include <conio.h>
 #endif
@@ -63,6 +68,12 @@
 #elif defined(PLATFORM_UNIX)
 #include <termios.h>
 #elif defined(PLATFORM_C64)
+#define BUFFER_SIZE (16 * 1024)
+#undef killcursor
+#undef cursor
+#define killcursor(x) cursor(0)
+#define cursor(x) cursor(1)
+#elif defined(PLATFORM_A800XL)
 #define BUFFER_SIZE (16 * 1024)
 #undef killcursor
 #undef cursor
@@ -119,6 +130,15 @@ rescan:
 	if(c == EOF) return -1;
 	if(c == '\r') return '\n';
 	if(c == 20) return 8;
+	if(c == 3) return 1;
+#elif defined(PLATFORM_A800XL)
+	if(!wait){
+		if(!kbhit()) return 0;
+	}
+	c = cgetc();
+	if(c == EOF) return -1;
+	if(c == '\r') return '\n';
+	if(c == 126) return 8;
 	if(c == 3) return 1;
 #endif
 	return c;
@@ -184,7 +204,7 @@ void change_color(int a) {
 	putstr(color);
 	putstr("m");
 	putstr("\x1b[2J\x1b[1;1H");
-#elif defined(PLATFORM_C64)
+#elif defined(PLATFORM_C64) || defined(PLATFORM_A800XL)
 	int fg = (a >> 4) & 0xf;
 	int bg = (a & 0xf);
 	bgcolor(bg);
@@ -223,7 +243,7 @@ int main() {
 	DDRB |= _BV(DDB5);
 	PORTB |= _BV(PORT5);
 #endif
-#if defined(PLATFORM_C64)
+#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL)
 	change_color((1 << 4) | 0);
 #endif
 	basic();
@@ -542,7 +562,8 @@ int execute(int linenum, char* cmd, char num) {
 	line[incr] = 0;
 	if(num == 0) {
 		int ret = run(line, -1, 0, 0);
-		putstr("Ready\r\n");
+		putstr("Ready");
+		putstr(NEWLINE);
 		return ret;
 	} else {
 		int addr = BUFFER_SIZE - 1;
@@ -640,8 +661,9 @@ void basic(void) {
 	putstr(PLATFORM);
 	putstr("   Krakow BASIC V");
 	putstr(VERSION);
-	putstr("\r\n");
-	putstr("Copyright 2024 by: Nishi.\r\n");
+	putstr(NEWLINE);
+	putstr("Copyright 2024 by: Nishi.");
+	putstr(NEWLINE);
 	putstr("                   penguin2233.");
 	putstr(NEWLINE);
 	putstr(NEWLINE);
@@ -671,7 +693,7 @@ void basic(void) {
 	lineind = 0;
 	while(1) {
 		char c;
-#if defined(PLATFORM_C64)
+#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL)
 		c = oggetch(1);
 #else
 		c = agetch();
@@ -716,7 +738,11 @@ void basic(void) {
 			lineind = 0;
 		} else if(c == 0x8 || c == 0x7f) {
 			if(lineind > 0) {
+#if defined(PLATFORM_A800XL)
+				putstr("\x7e \x7e");
+#else
 				putstr("\x08 \x08");
+#endif
 				linebuf[--lineind] = 0;
 			}
 		} else if(c == -1) {

@@ -18,4 +18,4 @@ krakow$(OBJ): basic.c
 	$(CC) $(CFLAGS) -o $@ basic.c
 
 clean:
-	rm -f *.hex *.exe krakow *.o *.elf krakow.s *.80
+	rm -f *.hex *.exe krakow *.o *.elf krakow.s *.80 *.rom
