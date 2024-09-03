@@ -1,0 +1,7 @@
+# $Id$
+
+CC = cc
+CFLAGS = -std=c99 -DPLATFORM_UNIX
+LDFLAGS =
+LIBS =
+EXEC =
