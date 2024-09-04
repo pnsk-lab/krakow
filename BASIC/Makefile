@@ -14,6 +14,10 @@ krakow$(EXEC): krakow$(OBJ)
 krakow.hex: krakow.elf
 	objcopy -O ihex -R $(SECTION) krakow.elf $@
 
+krakow.dsk: krakow$(EXEC) $(PWD)/master.dsk $(PWD)/ac.jar
+	cp $(PWD)/master.dsk $(PWD)/krakow.dsk
+	java -jar $(PWD)/ac.jar -as $(PWD)/krakow.dsk krakow < krakow$(EXEC)
+
 krakow$(OBJ): basic.c
 	$(CC) $(CFLAGS) -o $@ basic.c
 

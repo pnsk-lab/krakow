@@ -16,3 +16,4 @@ format:
 
 clean:
 	$(MAKE) -C ./BASIC $(FLAGS) clean
+	rm -f krakow.dsk

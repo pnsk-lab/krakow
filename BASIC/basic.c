@@ -14,7 +14,7 @@
 #define NEWLINE "\r\n"
 #define BREAKKEY
 
-#elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO) || defined(PLATFORM_C64) || defined(PLATFORM_A800XL)
+#elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO) || defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
 
 #if defined(PLATFORM_WINDOWS)
 #define PLATFORM "Windows"
@@ -31,6 +31,11 @@
 #include <conio.h>
 #elif defined(PLATFORM_A800XL)
 #define PLATFORM "Atari-800XL"
+#define NEWLINE "\n"
+#define BREAKKEY
+#include <conio.h>
+#elif defined(PLATFORM_APPLE2)
+#define PLATFORM "Apple2"
 #define NEWLINE "\n"
 #define BREAKKEY
 #include <conio.h>
@@ -79,6 +84,12 @@
 #undef cursor
 #define killcursor(x) cursor(0)
 #define cursor(x) cursor(1)
+#elif defined(PLATFORM_APPLE2)
+#define BUFFER_SIZE (8 * 1024)
+#undef killcursor
+#undef cursor
+#define killcursor(x) cursor(0)
+#define cursor(x) cursor(1)
 #endif
 
 #if defined(PLATFORM_ARDUINO)
@@ -113,17 +124,18 @@ rescan:
 	if(c == '\r') return '\n';
 #elif defined(PLATFORM_ARDUINO)
 rescan:
-	if(wait){
+	if(wait) {
 		if(!(UCSR0A & _BV(RXC0))) return 0;
-	}else{
-		while(!(UCSR0A & _BV(RXC0)));
+	} else {
+		while(!(UCSR0A & _BV(RXC0)))
+			;
 	}
 	c = UDR0;
 	if(c == '\r') return '\n';
 	if(c == '\n') goto rescan;
 	if(c == 3) return 1;
 #elif defined(PLATFORM_C64)
-	if(!wait){
+	if(!wait) {
 		if(!kbhit()) return 0;
 	}
 	c = cgetc();
@@ -132,13 +144,21 @@ rescan:
 	if(c == 20) return 8;
 	if(c == 3) return 1;
 #elif defined(PLATFORM_A800XL)
-	if(!wait){
+	if(!wait) {
 		if(!kbhit()) return 0;
 	}
 	c = cgetc();
 	if(c == EOF) return -1;
 	if(c == '\r') return '\n';
 	if(c == 126) return 8;
+	if(c == 3) return 1;
+#elif defined(PLATFORM_APPLE2)
+	if(!wait) {
+		if(!kbhit()) return 0;
+	}
+	c = cgetc();
+	if(c == EOF) return -1;
+	if(c == '\r') return '\n';
 	if(c == 3) return 1;
 #endif
 	return c;
@@ -204,7 +224,7 @@ void change_color(int a) {
 	putstr(color);
 	putstr("m");
 	putstr("\x1b[2J\x1b[1;1H");
-#elif defined(PLATFORM_C64) || defined(PLATFORM_A800XL)
+#elif defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
 	int fg = (a >> 4) & 0xf;
 	int bg = (a & 0xf);
 	bgcolor(bg);
@@ -217,7 +237,7 @@ void clear(void) {
 	system("cls");
 #elif defined(PLATFORM_UNIX) || defined(PLATFORM_ARDUINO)
 	putstr("\x1b[0m\x1b[2J\x1b[1;1H");
-#elif defined(PLATFORM_C64)
+#elif defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
 	clrscr();
 #endif
 }
@@ -243,7 +263,7 @@ int main() {
 	DDRB |= _BV(DDB5);
 	PORTB |= _BV(PORT5);
 #endif
-#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL)
+#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
 	change_color((1 << 4) | 0);
 #endif
 	basic();
