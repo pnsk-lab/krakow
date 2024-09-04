@@ -1,4 +1,6 @@
-name: Build Krakow BASIC
+# $Id$
+
+name: "Build Krakow BASIC"
 
 on:
   workflow_dispatch:
