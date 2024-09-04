@@ -29,8 +29,6 @@ jobs:
       run: make PLATFORM=c64
     - name: Rename
       run: cp BASIC/krakow.80 krakow-c64.80
-    - name: Create artifact
-      run: zip -rv krakow-c64.80
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
