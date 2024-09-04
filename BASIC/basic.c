@@ -295,6 +295,17 @@ int main() {
 unsigned char basicbuffer[BUFFER_SIZE];
 char linebuf[LINE_BUFFER_SIZE];
 
+int hexnum(char c) {
+	if('0' <= c && c <= '9') {
+		return c - '0';
+	} else if('A' <= c && c <= 'F') {
+		return c - 'A' + 10;
+	} else if('a' <= c && c <= 'f') {
+		return c - 'a' + 10;
+	}
+	return 0;
+}
+
 int pexpr(char* expr, char* buffer, int* number) {
 	char ownbuf[128];
 	int i;
@@ -304,18 +315,37 @@ int pexpr(char* expr, char* buffer, int* number) {
 	int stack[32];
 	int sp = 0;
 	char put = 0;
+	char hex = 0;
 	for(i = 0; expr[i] != 0; i++) ownbuf[i] = expr[i];
 	ownbuf[i] = 0;
 	for(i = 0; i < 32; i++) stack[i] = 0;
 	for(i = 0;; i++) {
 		if(ownbuf[i] == 0) {
 			break;
-		} else if('0' <= ownbuf[i] && ownbuf[i] <= '9') {
-			stack[sp] *= 10;
-			stack[sp] += ownbuf[i] - '0';
+		} else if(ownbuf[i] == '&' && put == 0) {
 			put = 1;
+			hex = 1;
+		} else if(('0' <= ownbuf[i] && ownbuf[i] <= '9') || (hex ? ('A' <= ownbuf[i] && ownbuf[i] <= 'F') : 0) || (hex ? ('a' <= ownbuf[i] && ownbuf[i] <= 'f') : 0)) {
+			stack[sp] *= hex ? 16 : 10;
+			if(hex == 1) {
+				stack[sp] += hexnum(ownbuf[i]);
+			} else {
+				stack[sp] += ownbuf[i] - '0';
+			}
+			put = 1;
+		} else if(ownbuf[i] == 'R') {
+			put = 0;
+			hex = 0;
+			if(sp < 1) {
+				return -1;
+			} else {
+				int top = stack[--sp];
+				stack[sp++] = (int)*(unsigned char*)top;
+			}
+			stack[sp] = 0;
 		} else if(ownbuf[i] == '+' || ownbuf[i] == '-' || ownbuf[i] == '*' || ownbuf[i] == '/') {
 			put = 0;
+			hex = 0;
 			if(sp < 2) {
 				return -1;
 			} else {
@@ -443,6 +473,72 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 		}
 		if(ret1 == 1) {
 			change_color((fgcolor << 4) | bgcolor);
+		} else if(ret1 == 0) {
+			putstr("! Invalid argument");
+			if(linenum != -1) {
+				putstr(" in line ");
+				putnum(linenum);
+			}
+			putstr(NEWLINE);
+			return 1;
+		} else if(ret1 == -1) {
+			putstr("! Syntax error");
+			if(linenum != -1) {
+				putstr(" in line ");
+				putnum(linenum);
+			}
+			putstr(NEWLINE);
+			return 1;
+		}
+	} else if(strcaseequ(rcmd, "POKE")) {
+		int argc = 0;
+		char* farg = 0;
+		char* sarg = 0;
+		int addr, data, ret0, ret1;
+		if(arg[0] != 0) argc++;
+		for(i = 0; arg[i] != 0; i++) {
+			if(arg[i] == ',') {
+				arg[i] = 0;
+				farg = arg;
+				sarg = arg + i + 1;
+				for(; *sarg != 0 && (*sarg == '\t' || *sarg == ' '); sarg++)
+					;
+				argc++;
+			}
+		}
+		if(argc != 2) {
+			putstr("! Invalid argument");
+			if(linenum != -1) {
+				putstr(" in line ");
+				putnum(linenum);
+			}
+			putstr(NEWLINE);
+			return 1;
+		}
+		addr = 0;
+		data = 0;
+		ret0 = pexpr(farg, 0, &addr);
+		ret1 = pexpr(sarg, 0, &data);
+		if(ret0 == 0) {
+			putstr("! Invalid argument");
+			if(linenum != -1) {
+				putstr(" in line ");
+				putnum(linenum);
+			}
+			putstr(NEWLINE);
+			return 1;
+		} else if(ret0 == -1) {
+			putstr("! Syntax error");
+			if(linenum != -1) {
+				putstr(" in line ");
+				putnum(linenum);
+			}
+			putstr(NEWLINE);
+			return 1;
+		}
+		if(ret1 == 1) {
+			unsigned char* a = (unsigned char*)addr;
+			*a = data;
 		} else if(ret1 == 0) {
 			putstr("! Invalid argument");
 			if(linenum != -1) {
@@ -713,12 +809,14 @@ void basic(void) {
 	lineind = 0;
 	while(1) {
 		char c;
-#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL)
+#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
 		c = oggetch(1);
 #else
 		c = agetch();
 #endif
-		if(c != 0) killcursor();
+		if(c != 0) {
+			killcursor();
+		}
 		if(c == 1) {
 			putstr("Break");
 			putstr(NEWLINE);

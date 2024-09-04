@@ -2,8 +2,8 @@
 
 CC = cc65
 LD = cl65
-CFLAGS = -DPLATFORM_A800XL --static-locals -t atarixl
-LDFLAGS = -t atarixl
+CFLAGS = -DPLATFORM_A800XL --static-locals -t atarixl -Os
+LDFLAGS = -t atarixl -Os
 LIBS =
 EXEC = .rom
 OBJ = .s
