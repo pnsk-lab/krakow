@@ -58,7 +58,7 @@ jobs:
         name: build-a800xl
         path: krakow-a800xl
 
-  build-a800xl:
+  build-pet:
     name: "Build for Commodore PET"
     runs-on: ubuntu-latest
 
