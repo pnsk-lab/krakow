@@ -1,0 +1,38 @@
+# $Id$
+
+name: Build Krakow BASIC
+
+on:
+  workflow_dispatch:
+  push:
+
+concurrency:
+  group: "build"
+  cancel-in-progress: true
+
+jobs:
+  build-c64:
+    name: "Build for Commodore 64"
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install packages
+      run: sudo apt-get install cc65
+    - name: Make sure it is clean
+      run: make clean PLATFORM=c64
+    - name: Make
+      run: make PLATFORM=c64
+    - name: Rename
+      run: cp BASIC/krakow.80 krakow-c64.80
+    - name: Create artifact
+      run: zip -rv krakow-c64.80
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-c64
+	path: krakow-c64.80
