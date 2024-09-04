@@ -83,6 +83,34 @@ jobs:
         name: build-pet
         path: krakow-pet.prg
 
+  build-apple2:
+    name: "Build for Apple 2"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install packages
+      run: sudo apt-get install cc65 default-jre
+    - name: Make sure it is clean
+      run: make clean PLATFORM=apple2
+    - name: Get AppleCommander
+      run: wget https://github.com/AppleCommander/AppleCommander/releases/download/1.9.0/AppleCommander-ac-1.9.0.jar -O ac.jar
+    - name: Get master.dsk
+      run: wget http://f.nishi.boats/f/g/master.dsk -O master.dsk
+    - name: Make
+      run: make PLATFORM=apple2
+    - name: Rename
+      run: cp BASIC/krakow.dsk krakow-apple2.dsk
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-apple2
+        path: krakow-apple2.dsk
+
   build-arduino:
     name: "Build for Arduino"
     runs-on: ubuntu-latest
@@ -114,7 +142,7 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-c64, build-arduino, build-a800xl, build-pet]
+    needs: [build-c64, build-arduino, build-a800xl, build-pet, build-apple2]
 
     steps:
     - name: Checkout
@@ -131,6 +159,10 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-pet
+    - name: Download from build-apple2
+      uses: actions/download-artifact@v4
+      with:
+        name: build-apple2
     - name: Download from build-arduino
       uses: actions/download-artifact@v4
       with:
@@ -140,6 +172,6 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Release
-      run: gh release create -t "v$(make get-version)" "$(make get-version)" krakow-c64.80 krakow-arduino.hex krakow-a800xl krakow-pet.prg -n "Version \`$(make get-version)\` was build in this release"
+      run: gh release create -t "v$(make get-version)" "$(make get-version)" krakow-c64.80 krakow-arduino.hex krakow-a800xl krakow-pet.prg krakow-apple2.dsk -n "Version \`$(make get-version)\` was build in this release"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
