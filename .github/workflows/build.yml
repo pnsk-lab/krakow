@@ -50,7 +50,7 @@ jobs:
     - name: Make sure it is clean
       run: make clean PLATFORM=arduino
     - name: Make
-      run: make PLATFORM=c64
+      run: make PLATFORM=arduino
     - name: Rename
       run: cp BASIC/krakow.hex krakow-arduino.hex
     - name: Upload artifact
