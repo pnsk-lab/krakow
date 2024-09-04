@@ -14,7 +14,7 @@
 #define NEWLINE "\r\n"
 #define BREAKKEY
 
-#elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO) || defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
+#elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO) || defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2) || defined(PLATFORM_PET)
 
 #if defined(PLATFORM_WINDOWS)
 #define PLATFORM "Windows"
@@ -29,6 +29,12 @@
 #define NEWLINE "\r\n"
 #define BREAKKEY
 #include <conio.h>
+#elif defined(PLATFORM_PET)
+#define PLATFORM "Commodore-PET"
+#define NEWLINE "\r\n"
+#define BREAKKEY
+#include <conio.h>
+#include <peekpoke.h>
 #elif defined(PLATFORM_A800XL)
 #define PLATFORM "Atari-800XL"
 #define NEWLINE "\n"
@@ -72,6 +78,12 @@
 #define putchar uart_putchar
 #elif defined(PLATFORM_UNIX)
 #include <termios.h>
+#elif defined(PLATFORM_PET)
+#define BUFFER_SIZE (4 * 1024)
+#undef killcursor
+#undef cursor
+#define killcursor(x) cursor(0)
+#define cursor(x) cursor(1)
 #elif defined(PLATFORM_C64)
 #define BUFFER_SIZE (16 * 1024)
 #undef killcursor
@@ -134,7 +146,7 @@ rescan:
 	if(c == '\r') return '\n';
 	if(c == '\n') goto rescan;
 	if(c == 3) return 1;
-#elif defined(PLATFORM_C64)
+#elif defined(PLATFORM_C64) || defined(PLATFORM_PET)
 	if(!wait) {
 		if(!kbhit()) return 0;
 	}
@@ -224,7 +236,7 @@ void change_color(int a) {
 	putstr(color);
 	putstr("m");
 	putstr("\x1b[2J\x1b[1;1H");
-#elif defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
+#elif defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2) || defined(PLATFORM_PET)
 	int fg = (a >> 4) & 0xf;
 	int bg = (a & 0xf);
 	bgcolor(bg);
@@ -237,7 +249,7 @@ void clear(void) {
 	system("cls");
 #elif defined(PLATFORM_UNIX) || defined(PLATFORM_ARDUINO)
 	putstr("\x1b[0m\x1b[2J\x1b[1;1H");
-#elif defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
+#elif defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2) || defined(PLATFORM_PET)
 	clrscr();
 #endif
 }
@@ -245,6 +257,11 @@ void clear(void) {
 void basic(void);
 
 int main() {
+#if defined(PLATFORM_PET)
+	if(PEEK(0x9000) == POKE(0x9000, PEEK(0x9000) + 1)) {
+		_heapadd((void*)0x9000, 0x2000);
+	}
+#endif
 #if defined(PLATFORM_WINDOWS)
 	HANDLE winstdout = GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD mode = 0;
@@ -263,8 +280,9 @@ int main() {
 	DDRB |= _BV(DDB5);
 	PORTB |= _BV(PORT5);
 #endif
-#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
+#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2) || defined(PLATFORM_PET)
 	change_color((1 << 4) | 0);
+	bordercolor(0);
 #endif
 	basic();
 #if defined(PLATFORM_WINDOWS)
@@ -809,7 +827,7 @@ void basic(void) {
 	lineind = 0;
 	while(1) {
 		char c;
-#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2)
+#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2) || defined(PLATFORM_PET)
 		c = oggetch(1);
 #else
 		c = agetch();
