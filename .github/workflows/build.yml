@@ -33,6 +33,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: build-c64
+        path: krakow-c64.80
 
   build-a800xl:
     name: "Build for Atari 800 XL"
