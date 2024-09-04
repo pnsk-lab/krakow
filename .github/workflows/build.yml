@@ -39,7 +39,7 @@ jobs:
     name: "Release"
     runs-on: ubuntu-latest
 
-    permissios:
+    permissions:
       contents: write
 
     needs: [build-c64]
