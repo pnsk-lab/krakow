@@ -35,6 +35,30 @@ jobs:
         name: build-c64
         path: krakow-c64.80
 
+  build-arduino:
+    name: "Build for Arduino"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install packages
+      run: sudo apt-get install avr-gcc
+    - name: Make sure it is clean
+      run: make clean PLATFORM=arduino
+    - name: Make
+      run: make PLATFORM=c64
+    - name: Rename
+      run: cp BASIC/krakow.hex krakow-arduino.hex
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-arduino
+        path: krakow-arduino.hex
+
   release:
     name: "Release"
     runs-on: ubuntu-latest
@@ -42,7 +66,7 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-c64]
+    needs: [build-c64, build-arduino]
 
     steps:
     - name: Checkout
@@ -51,11 +75,15 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-c64
+    - name: Download from build-arduino
+      uses: actions/download-artifact@v4
+      with:
+        name: build-arduino
     - name: Delete old release
       run: gh release delete "$(make get-version)" --cleanup-tag -y || true
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Release
-      run: gh release create -t "v$(make get-version)" "$(make get-version)" krakow-c64.80 -n "Version \`$(make get-version)\` was build in this release"
+      run: gh release create -t "v$(make get-version)" "$(make get-version)" krakow-c64.80 krakow-arduino.hex -n "Version \`$(make get-version)\` was build in this release"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
