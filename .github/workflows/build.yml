@@ -46,7 +46,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Install packages
-      run: sudo apt-get install avr-gcc
+      run: sudo apt-get install gcc-avr avr-libc
     - name: Make sure it is clean
       run: make clean PLATFORM=arduino
     - name: Make
