@@ -34,3 +34,22 @@ jobs:
       with:
         name: build-c64
         path: krakow-c64.80
+
+  release:
+    name: "Release"
+    runs-on: ubuntu-latest
+
+    permissios:
+      contents: write
+
+    needs: [build-c64]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Download from build-c64
+      uses: actions/download-artifact@v4
+      with:
+        name: build-c64
+    - name: Extract build-c64
+      run: unzip $GITHUB_WORKSPACE/build-c64.zip
