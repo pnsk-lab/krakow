@@ -183,6 +183,36 @@ jobs:
         name: build-arduino
         path: krakow-arduino.hex
 
+  build-msx:
+    name: "Build for MSX"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install packages
+      run: sudo apt-get install sdcc
+    - name: Clone hex2bin
+      run: git clone https://github.com/algodesigner/hex2bin
+    - name: Build hex2bin
+      run: rm -f hex2bin/hex2bin && make -C hex2bin
+    - name: Add to PATH
+      run: echo "$(pwd)/hex2bin" >> $GITHUB_PATH
+    - name: Make sure it is clean
+      run: make clean PLATFORM=msx
+    - name: Make
+      run: make PLATFORM=msx
+    - name: Rename
+      run: cp BASIC/krakow.msx.rom krakow-msx.rom
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-msx
+        path: krakow-msx.rom
+
   release:
     name: "Release"
     runs-on: ubuntu-latest
@@ -190,7 +220,7 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-c64, build-arduino, build-a800xl, build-pet, build-apple2, build-win32, build-win64]
+    needs: [build-c64, build-arduino, build-a800xl, build-pet, build-apple2, build-win32, build-win64, build-msx]
 
     steps:
     - name: Checkout
@@ -219,6 +249,10 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-win64
+    - name: Download from build-msx
+      uses: actions/download-artifact@v4
+      with:
+        name: build-msx
     - name: Download from build-arduino
       uses: actions/download-artifact@v4
       with:
@@ -228,6 +262,6 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Release
-      run: gh release create -t "v$(make get-version)" "$(make get-version)" krakow-c64.80 krakow-arduino.hex krakow-a800xl krakow-pet.prg krakow-apple2.dsk krakow-win32.exe krakow-win64.exe -n "Version \`$(make get-version)\` was build in this release"
+      run: gh release create -t "v$(make get-version)" "$(make get-version)" krakow-c64.80 krakow-arduino.hex krakow-a800xl krakow-pet.prg krakow-apple2.dsk krakow-win32.exe krakow-win64.exe krakow-msx.rom -n "Version \`$(make get-version)\` was build in this release"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
