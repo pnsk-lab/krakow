@@ -14,6 +14,137 @@
 #define NEWLINE "\r\n"
 #define BREAKKEY
 
+#elif defined(PLATFORM_MSX)
+
+#define PLATFORM "MSX"
+#define NEWLINE "\r\n"
+#define BREAKKEY
+
+#define mull(x, y) ((x) * (y))
+#define divl(x, y) ((x) / (y))
+
+#include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define agetch(x) oggetch(0)
+
+void basic(void);
+
+void main(void){
+	basic();
+}
+
+char _wgetch(char wait) __naked {
+	__asm
+		ld hl, #2
+		add hl, sp
+
+		ld a, (hl)
+
+		cp #1
+		jp z, wait
+
+		call 0x9c
+		jp nz, wait
+		ld l, a
+		ld h, #0
+		ret
+
+wait:
+		call 0x9f
+		ld l, a
+		ld h, #0
+		ret
+	__endasm;
+}
+
+char oggetch(char wait){
+	char c = _wgetch(wait);
+	if(c == '\r') return '\n';
+	if(c == 3) return 1;
+	return c;
+}
+
+void putchar(char c) __naked {
+	__asm
+		ld hl, #2
+		add hl, sp
+		ld a, (hl)
+		call 0xa2
+		ret
+	__endasm;
+}
+
+void putstr(const char* str){
+	int i;
+	for(i = 0; str[i] != 0; i++) putchar(str[i]);
+}
+
+void putnum(int a){
+	char numbuf[64];
+	int incr = 63;
+	numbuf[incr--] = 0;
+	int i;
+	while(1){
+		numbuf[incr--] = (a % 10) + '0';
+		a /= 10;
+		if(a == 0) break;
+	}
+	putstr(numbuf + incr + 1);
+}
+
+char strcaseequ(const char* a, const char* b){
+	int i;
+	if(strlen(a) != strlen(b)) return 0;
+	for(i = 0; a[i] != 0; i++){
+		if(toupper(a[i]) != toupper(b[i])) return 0;
+	}
+	return 1;
+}
+
+void change_color(unsigned char c) __naked {
+	__asm
+		ld hl, #2
+		add hl, sp
+
+		ld a, (hl)
+		and a, #0xf
+		ld (0xf3ea), a
+
+		ld a, (hl)
+		and a, #0xf0
+		sra a
+		sra a
+		sra a
+		sra a
+		ld (0xf3e9), a
+
+		ld a, #1
+		call 0x62
+
+		ret
+	__endasm;
+}
+
+#define strnum atoi
+
+void clear(void) __naked {
+	__asm
+		call 0x6f
+		ld a, #15
+		ld (0xf3e9), a
+		ld a, #1
+		ld (0xf3ea), a
+		ld a, #1
+		call 0x62
+		ret
+	__endasm;
+}
+
+#define killcursor(x)
+#define cursor(x)
+
 #elif defined(PLATFORM_UNIX) || defined(PLATFORM_WINDOWS) || defined(PLATFORM_ARDUINO) || defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2) || defined(PLATFORM_PET)
 
 #if defined(PLATFORM_WINDOWS)
@@ -833,7 +964,7 @@ void basic(void) {
 	lineind = 0;
 	while(1) {
 		char c;
-#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2) || defined(PLATFORM_PET)
+#if defined(PLATFORM_C64) || defined(PLATFORM_A800XL) || defined(PLATFORM_APPLE2) || defined(PLATFORM_PET) || defined(PLATFORM_MSX)
 		c = oggetch(1);
 #else
 		c = agetch();
