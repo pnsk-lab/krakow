@@ -13,7 +13,7 @@ krakow$(EXEC): krakow$(OBJ)
 
 krakow.msx.rom: krakow.msx.bin krakow.msx.ihx
 	hex2bin -e rom krakow.msx.ihx
-	dd if=krakow.msx.bin of=krakow.msx.rom obs=1 oseek=256 conv=notrunc
+	dd if=krakow.msx.bin of=krakow.msx.rom obs=1 seek=256 conv=notrunc
 
 krakow.msx.bin: krakow$(EXEC)
 	hex2bin -e msx.bin krakow$(EXEC)
