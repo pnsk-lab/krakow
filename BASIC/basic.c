@@ -255,7 +255,7 @@ void uart_init(void) {
 }
 #endif
 
-#define agetch(x) oggetch(0)
+#define agetch() oggetch(0)
 char oggetch(char wait) {
 	int c;
 #if defined(PLATFORM_WINDOWS)
@@ -269,7 +269,7 @@ rescan:
 	if(c == '\r') return '\n';
 #elif defined(PLATFORM_ARDUINO)
 rescan:
-	if(wait) {
+	if(!wait) {
 		if(!(UCSR0A & _BV(RXC0))) return 0;
 	} else {
 		while(!(UCSR0A & _BV(RXC0)))
@@ -467,6 +467,13 @@ int pexpr(char* expr, char* buffer, int* number) {
 	int sp = 0;
 	char put = 0;
 	char hex = 0;
+	if(expr[0] == '"' && expr[strlen(expr) - 1] == '"'){
+		for(i = 1; expr[i + 1] != 0; i++){
+			buffer[i - 1] = expr[i];
+		}
+		buffer[i - 1] = 0;
+		return 0;
+	}
 	for(i = 0; expr[i] != 0; i++) ownbuf[i] = expr[i];
 	ownbuf[i] = 0;
 	for(i = 0; i < 32; i++) stack[i] = 0;
@@ -642,6 +649,47 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 			}
 			putstr(NEWLINE);
 			return 1;
+		}
+	} else if(strcaseequ(rcmd, "PRINT")){
+		if(arg[0] != 0){
+			char sc = 0;
+			int incr = 0;
+			for(i = 0;; i++) {
+				if(arg[i] != 0) sc = 0;
+				if(arg[i] == ';' || arg[i] == 0) {
+					char oldc = arg[i];
+					arg[i] = 0;
+
+					if(strlen(arg + incr) > 0){	
+						char buffer[128];
+	
+						int number;
+						int ret = pexpr(arg + incr, buffer, &number);
+	
+						if(ret == 0){
+							putstr(buffer);
+						}else if(ret == 1){
+							putstr(" ");
+							putnum(number);
+						}else if(ret == -1){
+							putstr("! Syntax error");
+							if(linenum != -1) {
+								putstr(" in line ");
+								putnum(linenum);
+							}
+							putstr(NEWLINE);
+							return 1;
+						}
+					}
+					
+					incr = i + 1;
+					if(oldc == ';') sc = 1;
+					if(oldc == 0) break;
+				}
+			}
+			if(!sc) putstr(NEWLINE);
+		}else{
+			putstr(NEWLINE);
 		}
 #ifndef NO_PEEKPOKE
 	} else if(strcaseequ(rcmd, "POKE")) {
