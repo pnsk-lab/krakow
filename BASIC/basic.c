@@ -443,7 +443,8 @@ int main() {
 #define LINES (1024)
 #endif
 
-unsigned char basicbuffer[BUFFER_SIZE];
+unsigned char basicbuffer[BUFFER_SIZE / 2];
+unsigned char varbuffer[BUFFER_SIZE / 2];
 char linebuf[LINE_BUFFER_SIZE];
 
 int hexnum(char c) {
@@ -995,13 +996,18 @@ void basic(void) {
 	putstr(" lines");
 	putstr(NEWLINE);
 	putstr(" ");
+	putstr("Variable buffer ");
+	putnum(BUFFER_SIZE / 2);
+	putstr(" bytes");
+	putstr(NEWLINE);
+	putstr(" ");
 #endif
-	putnum(BUFFER_SIZE);
+	putnum(BUFFER_SIZE / 2);
 	putstr(" bytes free");
 	putstr(NEWLINE);
 	putstr(NEWLINE);
 
-	for(i = 0; i < BUFFER_SIZE; i++) {
+	for(i = 0; i < BUFFER_SIZE / 2; i++) {
 		basicbuffer[i] = 0;
 	}
 	putstr("Ready");
