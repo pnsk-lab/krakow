@@ -195,6 +195,8 @@ jobs:
       uses: actions/checkout@v4
     - name: Install packages
       run: sudo apt-get install sdcc
+    - name: Add SDCC path to env
+      run: echo "SDCC=/usr/share/sdcc" >> $GITHUB_ENV
     - name: Clone hex2bin
       run: git clone https://github.com/nishiowo/hex2bin
     - name: Build hex2bin
