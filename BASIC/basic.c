@@ -18,8 +18,10 @@
 
 #if defined(PLATFORM_WINDOWS)
 #define PLATFORM "Windows"
+#define NO_PEEKPOKE
 #elif defined(PLATFORM_UNIX)
 #define PLATFORM "Unix"
+#define NO_PEEKPOKE
 #elif defined(PLATFORM_ARDUINO)
 #define PLATFORM "Arduino"
 #define NEWLINE "\r\n"
@@ -351,6 +353,7 @@ int pexpr(char* expr, char* buffer, int* number) {
 				stack[sp] += ownbuf[i] - '0';
 			}
 			put = 1;
+#ifndef NO_PEEKPOKE
 		} else if(ownbuf[i] == 'R') {
 			put = 0;
 			hex = 0;
@@ -361,6 +364,7 @@ int pexpr(char* expr, char* buffer, int* number) {
 				stack[sp++] = (int)*(unsigned char*)top;
 			}
 			stack[sp] = 0;
+#endif
 		} else if(ownbuf[i] == '+' || ownbuf[i] == '-' || ownbuf[i] == '*' || ownbuf[i] == '/') {
 			put = 0;
 			hex = 0;
@@ -508,6 +512,7 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 			putstr(NEWLINE);
 			return 1;
 		}
+#ifndef NO_PEEKPOKE
 	} else if(strcaseequ(rcmd, "POKE")) {
 		int argc = 0;
 		char* farg = 0;
@@ -574,6 +579,7 @@ int run(char* cmd, int linenum, char num, int* lgoto) {
 			putstr(NEWLINE);
 			return 1;
 		}
+#endif
 	} else if(num == 0 && strcaseequ(rcmd, "LIST")) {
 		int addr = BUFFER_SIZE - 1;
 		int saddr = 0;
