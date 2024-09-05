@@ -111,6 +111,54 @@ jobs:
         name: build-apple2
         path: krakow-apple2.dsk
 
+  build-win32:
+    name: "Build for Windows (32)"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install packages
+      run: sudo apt-get install mingw-w64
+    - name: Make sure it is clean
+      run: make clean PLATFORM=win32
+    - name: Make
+      run: make PLATFORM=win32
+    - name: Rename
+      run: cp BASIC/krakow.exe krakow-win32.exe
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-win32
+        path: krakow-win32.exe
+
+  build-win64:
+    name: "Build for Windows (64)"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install packages
+      run: sudo apt-get install mingw-w64
+    - name: Make sure it is clean
+      run: make clean PLATFORM=win64
+    - name: Make
+      run: make PLATFORM=win64
+    - name: Rename
+      run: cp BASIC/krakow.exe krakow-win64.exe
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-win64
+        path: krakow-win64.exe
+
   build-arduino:
     name: "Build for Arduino"
     runs-on: ubuntu-latest
@@ -142,7 +190,7 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-c64, build-arduino, build-a800xl, build-pet, build-apple2]
+    needs: [build-c64, build-arduino, build-a800xl, build-pet, build-apple2, build-win32, build-win64]
 
     steps:
     - name: Checkout
@@ -163,6 +211,14 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-apple2
+    - name: Download from build-win32
+      uses: actions/download-artifact@v4
+      with:
+        name: build-win32
+    - name: Download from build-win64
+      uses: actions/download-artifact@v4
+      with:
+        name: build-win64
     - name: Download from build-arduino
       uses: actions/download-artifact@v4
       with:
@@ -172,6 +228,6 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Release
-      run: gh release create -t "v$(make get-version)" "$(make get-version)" krakow-c64.80 krakow-arduino.hex krakow-a800xl krakow-pet.prg krakow-apple2.dsk -n "Version \`$(make get-version)\` was build in this release"
+      run: gh release create -t "v$(make get-version)" "$(make get-version)" krakow-c64.80 krakow-arduino.hex krakow-a800xl krakow-pet.prg krakow-apple2.dsk krakow-win32.exe krakow-win64.exe -n "Version \`$(make get-version)\` was build in this release"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
