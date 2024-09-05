@@ -196,7 +196,7 @@ jobs:
     - name: Install packages
       run: sudo apt-get install sdcc
     - name: Clone hex2bin
-      run: git clone https://github.com/algodesigner/hex2bin
+      run: git clone https://github.com/nishiowo/hex2bin
     - name: Build hex2bin
       run: rm -f hex2bin/hex2bin && make -C hex2bin
     - name: Add to PATH
