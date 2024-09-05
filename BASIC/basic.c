@@ -211,6 +211,7 @@ void clear(void) __naked {
 #define putchar uart_putchar
 #elif defined(PLATFORM_UNIX)
 #include <termios.h>
+#include <sys/ioctl.h>
 #elif defined(PLATFORM_PET)
 #define BUFFER_SIZE (4 * 1024)
 #undef killcursor
@@ -260,10 +261,18 @@ char oggetch(char wait) {
 	int c;
 #if defined(PLATFORM_WINDOWS)
 rescan:
+	if(!wait){
+		if(!_kbhit()) return 0;
+	}
 	c = _getch();
 	if(c == '\r') return '\n';
 	if(c == '\n') goto rescan;
 #elif defined(PLATFORM_UNIX)
+	if(!wait){
+		int b;
+		ioctl(0, FIONREAD, &b);
+		if(b == 0) return 0;
+	}
 	c = getchar();
 	if(c == EOF) return -1;
 	if(c == '\r') return '\n';
