@@ -219,6 +219,8 @@ void clear(void) __naked {
 #include <pthread.h>
 
 void* x11_thread(void* arg);
+char x11_putchar(char c);
+void x11_init(void);
 #else
 #include <termios.h>
 #include <sys/ioctl.h>
@@ -267,8 +269,17 @@ void uart_init(void) {
 }
 #endif
 
+#if defined(PLATFORM_X11)
+#undef putchar
+#define putchar(x) x11_putchar(x)
+#endif
+
 #define agetch() oggetch(0)
-char oggetch(char wait) {
+char oggetch(char wait)
+#if defined(PLATFORM_X11)
+;
+#else
+{
 	int c;
 #if defined(PLATFORM_WINDOWS)
 rescan:
@@ -279,8 +290,6 @@ rescan:
 	if(c == '\r') return '\n';
 	if(c == '\n') goto rescan;
 #elif defined(PLATFORM_UNIX)
-#if defined(PLATFORM_X11)
-#else
 	if(!wait){
 		int b;
 		ioctl(0, FIONREAD, &b);
@@ -289,7 +298,6 @@ rescan:
 	c = getchar();
 	if(c == EOF) return -1;
 	if(c == '\r') return '\n';
-#endif
 #elif defined(PLATFORM_ARDUINO)
 rescan:
 	if(!wait) {
@@ -331,6 +339,7 @@ rescan:
 #endif
 	return c;
 }
+#endif
 
 bool strcaseequ(const char* a, const char* b) { return strcasecmp(a, b) == 0; }
 
@@ -354,18 +363,33 @@ void putnum(int n) {
 	putstr(buf + incr + 1);
 }
 #else
-void putnum(int n) {
+void putnum(int n)
+#if defined(PLATFORM_X11)
+;
+#else
+{
 	printf("%d", n);
 	fflush(stdout);
 }
+#endif
 
-void putstr(const char* n) {
+void putstr(const char* n)
+#if defined(PLATFORM_X11)
+;
+#else
+{
 	printf("%s", n);
 	fflush(stdout);
 }
 #endif
 
-void change_color(int a) {
+#endif
+
+void change_color(int a)
+#if defined(PLATFORM_X11)
+;
+#else
+{
 #if defined(PLATFORM_ARDUINO) || defined(PLATFORM_UNIX)
 	int fg = (a >> 4) & 0xf;
 	int bg = (a & 0xf);
@@ -399,8 +423,13 @@ void change_color(int a) {
 	textcolor(fg);
 #endif
 }
+#endif
 
-void clear(void) {
+void clear(void)
+#if defined(PLATFORM_X11)
+;
+#else
+{
 #if defined(PLATFORM_WINDOWS)
 	system("cls");
 #elif defined(PLATFORM_UNIX) || defined(PLATFORM_ARDUINO)
@@ -409,6 +438,7 @@ void clear(void) {
 	clrscr();
 #endif
 }
+#endif
 
 void basic(void);
 
@@ -428,6 +458,7 @@ int main() {
 #elif defined(PLATFORM_UNIX)
 #if defined(PLATFORM_X11)
 	pthread_t thread;
+	x11_init();
 	pthread_create(&thread, NULL, x11_thread, NULL);
 #else
 	struct termios old, new;
@@ -1108,7 +1139,9 @@ void basic(void) {
 			break;
 		} else if(c != 0) {
 			putchar(c);
-			linebuf[lineind++] = c;
+			if(lineind <= LINE_BUFFER_SIZE){
+				linebuf[lineind++] = c;
+			}
 		}
 		cursor();
 	}
