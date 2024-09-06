@@ -2,6 +2,10 @@
 
 /* Krakow BASIC - Multi-platform simple BASIC */
 
+#if defined(PLATFORM_X11)
+#define PLATFORM_UNIX
+#endif
+
 #if defined(PLATFORM_SHIROI)
 
 #include "dri/text.h"
@@ -210,8 +214,15 @@ void clear(void) __naked {
 #undef putchar
 #define putchar uart_putchar
 #elif defined(PLATFORM_UNIX)
+#if defined(PLATFORM_X11)
+#include <X11/Xlib.h>
+#include <pthread.h>
+
+void* x11_thread(void* arg);
+#else
 #include <termios.h>
 #include <sys/ioctl.h>
+#endif
 #elif defined(PLATFORM_PET)
 #define BUFFER_SIZE (4 * 1024)
 #undef killcursor
@@ -268,6 +279,8 @@ rescan:
 	if(c == '\r') return '\n';
 	if(c == '\n') goto rescan;
 #elif defined(PLATFORM_UNIX)
+#if defined(PLATFORM_X11)
+#else
 	if(!wait){
 		int b;
 		ioctl(0, FIONREAD, &b);
@@ -276,6 +289,7 @@ rescan:
 	c = getchar();
 	if(c == EOF) return -1;
 	if(c == '\r') return '\n';
+#endif
 #elif defined(PLATFORM_ARDUINO)
 rescan:
 	if(!wait) {
@@ -412,11 +426,16 @@ int main() {
 	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 	SetConsoleMode(winstdout, mode);
 #elif defined(PLATFORM_UNIX)
+#if defined(PLATFORM_X11)
+	pthread_t thread;
+	pthread_create(&thread, NULL, x11_thread, NULL);
+#else
 	struct termios old, new;
 	tcgetattr(0, &old);
 	new = old;
 	new.c_lflag &= ~(ECHO | ICANON);
 	tcsetattr(0, TCSANOW, &new);
+#endif
 #elif defined(PLATFORM_ARDUINO)
 	uart_init();
 	DDRB |= _BV(DDB5);
@@ -430,7 +449,11 @@ int main() {
 #if defined(PLATFORM_WINDOWS)
 	SetConsoleMode(winstdout, origmode);
 #elif defined(PLATFORM_UNIX)
+#if defined(PLATFORM_X11)
+	pthread_join(thread, NULL);
+#else
 	tcsetattr(0, TCSANOW, &old);
+#endif
 #endif
 }
 
